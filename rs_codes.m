@@ -1,3 +1,5 @@
+clear;
+%% Generator Matrix, Codewords, Parity Check Matrix
 % RS Code parameters
 k = 3; % Bits/message
 n = 7; % Bits/codeword
@@ -9,26 +11,22 @@ bitstream = randi([0 n], 1, length);
 
 % Sampling k bits and creating column vectors
 num_cols = length/k;
-message = zeros(k, num_cols);
-for i = 1:num_cols
-    start_idx = (i-1)*k + 1;
-    end_idx = i*k;
-    bit_chunk = bitstream(start_idx:end_idx).';  % Transpose to form a column vector
-    message(:,i) = bit_chunk;
-end
-
+message = reshape(bitstream, k, []);
 message = gf(message, 3);
+inp_bits = reshape(dec2bin(message.x,3)-'0', [], 1);
 
+%{
 % Galois Field Elements
-% g = gf(0:n,3); 
+g = gf(0:n,3); 
 % Generator Matrix   
-% g_prime = g(g ~= 0);
-% G = gf(zeros(n,k),3);
-% for i = 1:n
-%    for j = 1:k
-%        G(i, j) = g_prime(i) ^ (j-1);
-%    end
-% end
+g_prime = g(g ~= 0);
+G = gf(zeros(n,k),3);
+for i = 1:n
+    for j = 1:k
+        G(i, j) = g_prime(i) ^ (j-1);
+    end
+end
+%}
 
 % Define the Galois field matrix in GF(2^3)
 G = [1 0 0 6 1 6 7;
@@ -41,7 +39,16 @@ G = G.';
 % Generating codewords for every k message bits
 c = G*message;
 c_without_noise = c;
+c_bits = reshape(dec2bin(c.x, 3) - '0', [], 1); % Converting codewords to a binary sequence
 
+% Constructing Parity Check Matrix
+p_mat = G(k+1:n, :); % (n-k)*k matrix
+p_mat_inverse = -p_mat;
+i2_mat = eye(n-k);
+H = [p_mat_inverse i2_mat];
+% K = H*G;
+
+%% Adding Noise
 % Adding noise to the transmitted message
 noise = zeros(n,num_cols);
 for i=1:num_cols
@@ -54,57 +61,32 @@ end
 noise = gf(noise,3);
 c = c+noise;
 
-% Constructing Parity Check Matrix
-p_mat = G(k+1:n, :); % (n-k)*k matrix
-p_mat_inverse = -p_mat;
-i2_mat = eye(n-k);
-H = [p_mat_inverse i2_mat];
-% K = H*G;
-
-% Create a set of all possible error vectors
+%% Error Vectors
+% Set of all possible error vectors
 err_vectors = [];
 
-% Custom function
-function result = combnk_with_replacement(v, k)
-    result = [];
-    
-    % Total number of possible combinations
-    num_combinations = numel(v)^k;
-    
-    % Generate all combinations
-    for i = 1:num_combinations
-        % Convert index to combination
-        index = i - 1;
-        combination = zeros(1, k);
-        for j = k:-1:1
-            combination(j) = v(mod(index, numel(v)) + 1);
-            index = floor(index / numel(v));
-        end
-        result = [result; combination];
-    end
-end
-
 % m represents number of possible errors at a time
-for m=1:t
-    positions = nchoosek(1:n,m);     %  Each row represents a set of indices
-    values = combnk_with_replacement(1:n, m); % Each row represents a set of values that can be taken
+for num_of_errors=1:t
+    positions = nchoosek(1:n,num_of_errors);              %  Each row represents a set of indices
+    values = combnk_with_replacement(1:n, num_of_errors); % Each row represents a set of values that can be taken
     
-    for i = 1:size(positions,1)
-        for j = 1:size(values,1)
+    for l_ind_3 = 1:size(positions,1)
+        for l_ind_4 = 1:size(values,1)
             vec = zeros(1,n);
-            vec(positions(i,:)) = values(j,:);
+            vec(positions(l_ind_3,:)) = values(l_ind_4,:);
             err_vectors = [err_vectors; vec];
         end
     end
 end
 
-% Create a mapping between e and H.e'
+%% Lookup Table
+% Mapping between e and H.e'
 lookup_table = containers.Map('KeyType', 'char', 'ValueType', 'any');
 
-for i = 1:size(err_vectors,1)
-    e = err_vectors(i,:);          % Error Vector
+for l_ind_5 = 1:size(err_vectors,1)
+    e = err_vectors(l_ind_5,:);          % Error Vector
     e = gf(e,3);                   
-    syndrome = H*e';               % Parity Matrix * Error Vector
+    syndrome = H*e';                     % Parity Matrix * Error Vector
     
     % Convert numeric array to a string key using sprintf
     key = sprintf('%d ', syndrome.x);
@@ -121,10 +103,7 @@ for i = 1:size(err_vectors,1)
     end
 end
 
-% Lookup table content
-table_keys = lookup_table.keys;
-table_values = lookup_table.values;
-
+%% Syndrome Decoding
 % Calculate syndrome for each codeword
 s = H*c;
 er = gf(zeros(n,num_cols),3);
