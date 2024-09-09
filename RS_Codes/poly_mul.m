@@ -1,7 +1,7 @@
-function [mul_res] = poly_mul(poly_a, poly_b, poly_prim)
+function [mul_res] = poly_mul(poly_a, poly_b, poly_prim, q)
     % Base Case - One of the vectors is zero
     if(all(poly_a == 0) || all(poly_b == 0))
-        mul_res = zeros(1,3);  % Return 000 because we are working with 3 bit codewords
+        mul_res = zeros(1,q);  % Return 000..0 (q times) because we are working with q bit codewords
         return; 
     end
 
@@ -64,7 +64,7 @@ function [mul_res] = poly_mul(poly_a, poly_b, poly_prim)
         else
             curr_mul(:) = 0;
         end
-        res = bitxor(res,curr_mul); % res is in Little Endian format
+        res = poly_add(res,curr_mul); % res is in Little Endian format
     end
 
     % Division with primitive polynomial
@@ -83,7 +83,7 @@ function [mul_res] = poly_mul(poly_a, poly_b, poly_prim)
         % XOR only if leading factor in res_bin = 1 (Just like normal divison)
             if res_big(i) == 1
                 for j = i:length(poly_prim)+i-1
-                    res_big(j) = bitxor(res_big(j), poly_prim(j-i+1));
+                    res_big(j) = poly_add(res_big(j), poly_prim(j-i+1));
                 end
             end
         end
