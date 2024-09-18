@@ -1,4 +1,10 @@
 function out = srrcGen(alpha,symbol_rate,truncation_length,oversampling_factor,type,wordLength,fractionLength)
+% This function generates a fixed point SRRC pulse with provided arguments
+% alpha : roll-off factor
+% type  : This can take 2 values, 'normalised' or 'original'. 'Original'
+%         gives the output as a normal srrc pulse, while choosing 
+%         'normalised' outputs a SRRC pulse normalised to have energy 1.
+% wordLength and fractionLength are fixed point parameters
 
 Ts = 1/symbol_rate;                       % Symbol period
 T = Ts/oversampling_factor;               % Sampling period
