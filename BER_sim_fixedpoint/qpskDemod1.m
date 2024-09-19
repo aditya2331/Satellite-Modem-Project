@@ -1,4 +1,7 @@
 function out_sig = qpskDemod1(in_sig)
+% This function performs demodulation for aa given QPSK modulated signal.
+% It checks, the quadrant in which the input lies and assigns the
+% correspponding bits to the symbol. 
 
 out_sig = zeros(size(in_sig*2));
 
