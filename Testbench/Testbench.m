@@ -22,7 +22,8 @@ M = 4;                % Number of constellation points for M-PSK modulation
 
 % Channel parameters-------------------------------------------------------
 
-Eb_N0 = 2; 
+Eb_N0 = 2;
+sampling_rate = oversampling_factor*symbol_rate;
 % Transmitter End
 
 % Message signal-----------------------------------------------------------
@@ -37,14 +38,18 @@ srrc = srrcGen(roll_off,symbol_rate,truncation_length,oversampling_factor,pulse_
 transmitted_signal = pulseShaper(modulated_signal,oversampling_factor,srrc,wordLength,fractionLength);
 % Channel simulation
 
+% Adding Carrier Frequency Offset------------------------------------------
+[shifted_signal,freq_offset] = doppShift(transmitted_signal,sampling_rate,oversampling_factor,N,M,wordLength,fractionLength);
+
 % Introducing AWGN --------------------------------------------------------
-received_sig = awgn_channel(transmitted_signal,Eb_N0,oversampling_factor,wordLength,fractionLength);
+received_sig = awgn_channel(shifted_signal,Eb_N0,oversampling_factor,wordLength,fractionLength);
 % Receiver End
 
 % Matched Filter-----------------------------------------------------------
-received_message = matchedFilter(received_sig,oversampling_factor,srrc,wordLength,fractionLength);
+[received_message,det_freq] = matchedFilter(received_sig,oversampling_factor,srrc, M, sampling_rate, wordLength,fractionLength);
 %scatterplot(double(received_message));
 
 % Demodulation and BER calculation-----------------------------------------
 output_message = qpskDemod1(received_message);
 bit_error_rate = sum(output_message ~= message_signal)/(2*N)
+freq_error = det_freq - freq_offset
