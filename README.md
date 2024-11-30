@@ -1,5 +1,5 @@
 ## Introduction
-The project involves implementation of a QPSK modem for a satellite communications link.
+The project involves implementation of a QPSK modem for a satellite communications link. Please find the complete system simulation script in the FinalTestbench folder. 
 ### Features
 - Raised-cosine filter
 - Scrambling and descrambling
